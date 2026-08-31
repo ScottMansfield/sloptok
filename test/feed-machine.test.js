@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createFeedMachine, PREFETCH } from "../lib/feed-machine.js";
+import { createFeedMachine, PREFETCH, POOL_SIZE } from "../lib/feed-machine.js";
 
 function deferred() {
   let resolve;
@@ -29,21 +29,28 @@ function machineWith(overrides = {}) {
     pickPrompt: fakePrompt,
     startT2V: async (clip) => {
       const d = deferred();
-      t2v.set(clip.index, d);
+      t2v.set(clip.slot, d);
       return d.promise;
     },
     startFallback: async (clip) => {
       const d = deferred();
-      fallback.set(clip.index, d);
+      fallback.set(clip.slot, d);
       return d.promise;
     },
     pollT2V: async (clip) => {
-      const d = t2v.get(clip.index);
+      const d = t2v.get(clip.slot);
       return d.promise;
     },
+    refreshMs: 0,
     ...overrides,
   });
   return { m, t2v, fallback };
+}
+
+async function fillPool(m, size) {
+  for (let i = 0; i < size; i++) {
+    await m.getFeed(i);
+  }
 }
 
 describe("feed machine prefetch / fallback", () => {
@@ -123,15 +130,19 @@ describe("feed machine prefetch / fallback", () => {
     assert.equal(m.startCounts.t2v.get(3), 1);
   });
 
-  it("extends the window when scrolling without waiting on earlier t2v", async () => {
-    const { m } = machineWith();
+  it("prefetches missing pool slots while filling, without creating clips past the pool", async () => {
+    const { m } = machineWith({ poolSize: 8 });
     await m.getFeed(0);
     const feed = await m.getFeed(5);
     assert.deepEqual(
-      feed.clips.map((c) => c.index),
+      feed.clips.map((c) => c.feedIndex),
       [5, 6, 7],
     );
-    assert.equal(feed.clips.every((c) => c.upgrading), true);
+    assert.deepEqual(
+      feed.clips.map((c) => c.slot),
+      [5, 6, 7],
+    );
+    assert.equal(m.startCounts.t2vTotal, 6);
   });
 
   it("uses default h3 model, not ltx", async () => {
@@ -139,5 +150,124 @@ describe("feed machine prefetch / fallback", () => {
     const feed = await m.getFeed(0);
     assert.equal(m.defaultModel, "h3");
     assert.equal(feed.clips[0].model, "h3");
+  });
+});
+
+describe("clip pool", () => {
+  it("after 20 slots filled, getFeed(100) does not start more T2V", async () => {
+    const { m } = machineWith({ poolSize: POOL_SIZE });
+    await fillPool(m, POOL_SIZE);
+    assert.equal(m.startCounts.t2vTotal, 20);
+    assert.equal(m.poolStatus().filled, 20);
+    const feed = await m.getFeed(100);
+    assert.equal(m.startCounts.t2vTotal, 20);
+    assert.equal(feed.clips[0].slot, 0);
+    assert.equal(feed.clips[0].feedIndex, 100);
+    assert.equal(feed.clips[1].slot, 1);
+    assert.equal(feed.clips[2].slot, 2);
+  });
+
+  it("getFeed(20) serves slot 0 (wrap)", async () => {
+    const { m } = machineWith();
+    await m.getFeed(0);
+    const feed = await m.getFeed(20);
+    assert.equal(feed.clips[0].slot, 0);
+    assert.equal(feed.clips[0].feedIndex, 20);
+    assert.equal(feed.clips[0].index, 20);
+    assert.equal(feed.clips[0].id, m.raw(0).id);
+    assert.equal(m.startCounts.t2v.get(0), 1);
+    assert.equal(m.startCounts.t2vTotal, 3);
+  });
+
+  it("refresh replaces exactly one slot and bumps t2v count by 1", async () => {
+    const { m } = machineWith({ poolSize: 4 });
+    await fillPool(m, 4);
+    const before = m.startCounts.t2vTotal;
+    const idsBefore = [0, 1, 2, 3].map((s) => m.raw(s).id);
+    const result = m.refresh();
+    assert.equal(result.ok, true);
+    assert.equal(m.startCounts.t2vTotal, before + 1);
+    const idsAfter = [0, 1, 2, 3].map((s) => m.raw(s).id);
+    const changed = idsAfter.filter((id, i) => id !== idsBefore[i]);
+    assert.equal(changed.length, 1);
+    assert.equal(idsAfter.filter((id) => idsBefore.includes(id)).length, 3);
+  });
+
+  it("does not generate fallback for recycled views of a ready slot", async () => {
+    const { m, t2v, fallback } = machineWith({ poolSize: 4 });
+    await m.getFeed(0);
+    fallback.get(0).resolve({ videoUrl: "/f.mp4", posterUrl: "/p.jpg" });
+    t2v.get(0).resolve({ requestId: "r", videoUrl: "/t.mp4" });
+    await m.raw(0)._t2v;
+    const fbBefore = m.startCounts.fallback.get(0);
+    const t2vBefore = m.startCounts.t2v.get(0);
+    const feed = await m.getFeed(4);
+    assert.equal(feed.clips[0].slot, 0);
+    assert.equal(feed.clips[0].status, "ready");
+    assert.equal(m.startCounts.fallback.get(0), fbBefore);
+    assert.equal(m.startCounts.t2v.get(0), t2vBefore);
+  });
+
+  it("hydrates ready slots from a manifest without kicking T2V", async () => {
+    const hydrate = {
+      version: 1,
+      poolSize: 4,
+      promptSeq: 4,
+      lastRefreshAt: 1,
+      slots: [0, 1, 2, 3].map((slot) => ({
+        slot,
+        id: `slop-${slot}-ready`,
+        handle: `@h${slot}`,
+        caption: `c${slot}`,
+        prompt: `p${slot}`,
+        model: "h3",
+        t2vUrl: `/api/media/slop-${slot}-t2v.mp4`,
+        t2vFile: `slop-${slot}-t2v.mp4`,
+        createdAt: slot + 1,
+      })),
+    };
+    const { m } = machineWith({ poolSize: 4, hydrate });
+    const feed = await m.getFeed(0);
+    assert.equal(m.startCounts.t2vTotal, 0);
+    assert.equal(m.startCounts.fallbackTotal, 0);
+    assert.equal(feed.clips[0].id, "slop-0-ready");
+    assert.equal(feed.clips[0].status, "ready");
+    assert.equal(feed.clips[0].videoUrl, "/api/media/slop-0-t2v.mp4");
+    const wrapped = await m.getFeed(8);
+    assert.equal(wrapped.clips[0].slot, 0);
+    assert.equal(m.startCounts.t2vTotal, 0);
+  });
+
+  it("persists slot records including local media files", async () => {
+    const saved = [];
+    const { m, t2v, fallback } = machineWith({
+      poolSize: 4,
+      persist: (snap) => saved.push(snap),
+    });
+    await m.getFeed(0);
+    fallback.get(0).resolve({
+      videoUrl: "/api/media/slop-0-0.mp4",
+      posterUrl: "/api/media/slop-0-0.jpg",
+    });
+    await m.getFeed(0, { waitFallbackMs: 50 });
+    t2v.get(0).resolve({ requestId: "r", videoUrl: "/api/media/slop-0-0-t2v.mp4" });
+    await m.raw(0)._t2v;
+    assert.ok(saved.length >= 1);
+    const last = saved[saved.length - 1];
+    const slot0 = last.slots.find((s) => s.slot === 0);
+    assert.equal(slot0.t2vFile, "slop-0-0-t2v.mp4");
+    assert.equal(slot0.fallbackFile, "slop-0-0.mp4");
+    assert.equal(slot0.posterFile, "slop-0-0.jpg");
+  });
+
+  it("serialized clips include feedIndex, slot, and a stable per-slot id", async () => {
+    const { m } = machineWith({ poolSize: 4 });
+    const feed = await m.getFeed(6);
+    assert.equal(feed.poolSize, 4);
+    assert.equal(feed.clips[0].feedIndex, 6);
+    assert.equal(feed.clips[0].slot, 2);
+    assert.equal(feed.clips[0].id, m.raw(2).id);
+    assert.equal(feed.clips[1].slot, 3);
+    assert.equal(feed.clips[2].slot, 0);
   });
 });
