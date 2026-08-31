@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   let pool = null;
   try {
-    pool = getMachine().poolStatus();
+    pool = (await getMachine()).poolStatus();
   } catch {
     pool = null;
   }
