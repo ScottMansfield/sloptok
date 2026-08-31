@@ -4,19 +4,33 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const CACHE = new Map();
 
+function feedKey(clip, fallback) {
+  if (clip && (clip.feedIndex != null || clip.index != null)) {
+    return clip.feedIndex ?? clip.index;
+  }
+  return fallback;
+}
+
 async function loadWindow(index, garnish) {
-  const key = `${garnish}:${index}`;
   const res = await fetch(`/api/feed?index=${index}&garnish=${garnish}`, {
     cache: "no-store",
   });
   if (!res.ok) throw new Error("feed failed");
   const data = await res.json();
-  for (const clip of data.clips) CACHE.set(clip.index, clip);
+  for (const clip of data.clips) {
+    const fi = clip.feedIndex ?? clip.index;
+    CACHE.set(fi, { ...clip, feedIndex: fi, index: fi });
+  }
   return data;
 }
 
 function mergeClip(next) {
-  CACHE.set(next.index, next);
+  for (const [k, prev] of CACHE) {
+    if (prev.id === next.id) {
+      const fi = prev.feedIndex ?? prev.index ?? k;
+      CACHE.set(k, { ...next, feedIndex: fi, index: fi, slot: next.slot ?? prev.slot });
+    }
+  }
   return next;
 }
 
@@ -143,18 +157,21 @@ export default function Feed() {
       <div className="cabinet">
         <div className="rails" aria-hidden="true" />
         <div className="viewport" ref={scroller}>
-          {(clips.length ? clips : [{ index: 0, id: "boot", status: "pending" }]).map((clip) => (
-            <Slide
-              key={clip.id || clip.index}
-              clip={clip}
-              active={clip.index === index}
-              muted={muted}
-              onUpgrade={(next) => {
-                mergeClip(next);
-                snapshot();
-              }}
-            />
-          ))}
+          {(clips.length ? clips : [{ index: 0, feedIndex: 0, id: "boot", status: "pending" }]).map((clip) => {
+            const fi = feedKey(clip, 0);
+            return (
+              <Slide
+                key={`feed-${fi}`}
+                clip={clip}
+                active={fi === index}
+                muted={muted}
+                onUpgrade={(next) => {
+                  mergeClip(next);
+                  snapshot();
+                }}
+              />
+            );
+          })}
         </div>
         <aside className="lever-col">
           <button className="act lever" onClick={() => go(index + 1)} title="spin next">
