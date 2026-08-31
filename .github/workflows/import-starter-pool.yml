@@ -1,0 +1,93 @@
+name: import-starter-pool
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/import-starter-pool.yml'
+permissions:
+  contents: write
+jobs:
+  import:
+    if: github.repository == 'ScottMansfield/sloptok'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download H3 clips and write manifest
+        run: |
+          set -euo pipefail
+          mkdir -p data/clips
+          curl -fsSL -o data/clips/slop-0-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa89769/GlnzGpLgN-_nDxHgv2PrR_minimax-h3.mp4'
+          test -s data/clips/slop-0-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-1-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa8976b/_51zMuqeeN-keLsnkM6Y8_minimax-h3.mp4'
+          test -s data/clips/slop-1-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-2-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa8976a/o7Aw-nIcJUy3UeyH91fAs_minimax-h3.mp4'
+          test -s data/clips/slop-2-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-3-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa8976a/0V4aTj5JI1jbABQEuvD7Y_minimax-h3.mp4'
+          test -s data/clips/slop-3-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-4-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa8976a/RkET8c_7wr-ODYieoHCmG_minimax-h3.mp4'
+          test -s data/clips/slop-4-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-5-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa89787/_0HTe3JlWiEJ3L_qDtbjg_minimax-h3.mp4'
+          test -s data/clips/slop-5-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-6-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa89788/t1GYxhENWTCN4TgBnjZj6_minimax-h3.mp4'
+          test -s data/clips/slop-6-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-7-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa89788/pENILqwP4WP-C6lNdVbjT_minimax-h3.mp4'
+          test -s data/clips/slop-7-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-8-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa89786/Yg1oBRrH4hDqKHpHPUVX9_minimax-h3.mp4'
+          test -s data/clips/slop-8-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-9-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa8979c/U1uqEye1YEkBXDtSpLd1N_minimax-h3.mp4'
+          test -s data/clips/slop-9-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-10-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa89793/qkOKiodiaxeRHkxJJRNvm_minimax-h3.mp4'
+          test -s data/clips/slop-10-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-11-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa89793/BcmcI6NT2xZ9wIiWzSjNm_minimax-h3.mp4'
+          test -s data/clips/slop-11-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-12-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa89794/VRNncFdq6yP20_7Z3_hX7_minimax-h3.mp4'
+          test -s data/clips/slop-12-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-13-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa89793/NI7musjZRke2E4vQDjXyD_minimax-h3.mp4'
+          test -s data/clips/slop-13-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-14-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa89793/vpqeN18d1yoHXKoZqVUOd_minimax-h3.mp4'
+          test -s data/clips/slop-14-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-15-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa8979e/mfnw-jykOVPbaj4N-AbD8_minimax-h3.mp4'
+          test -s data/clips/slop-15-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-16-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa8979e/Ol6tEIetSaOvJJP8bgwi__minimax-h3.mp4'
+          test -s data/clips/slop-16-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-17-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa8979e/7O6RfsV44GTh4p7AvjaR__minimax-h3.mp4'
+          test -s data/clips/slop-17-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-18-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa8979e/Xz8jqMm3rlXwO7Usc48uW_minimax-h3.mp4'
+          test -s data/clips/slop-18-0-t2v.mp4
+          curl -fsSL -o data/clips/slop-19-0-t2v.mp4 'https://v3b.fal.media/files/b/0aa8979f/Ax_LTVYYNzWqxko874A4__minimax-h3.mp4'
+          test -s data/clips/slop-19-0-t2v.mp4
+          python3 - <<'PY'
+          import json, time, pathlib, re
+          text = pathlib.Path('lib/prompts.js').read_text()
+          blocks = re.findall(r'handle: "([^"]+)",\s*caption: "([^"]+)",\s*prompt: `([^`]+)`', text)
+          assert len(blocks) >= 12, len(blocks)
+          now = int(time.time()*1000)
+          slots=[]
+          for slot in range(20):
+              handle, caption, prompt = blocks[slot % 12]
+              p = pathlib.Path(f'data/clips/slop-{slot}-0-t2v.mp4')
+              b = p.read_bytes()
+              assert b[4:8]==b'ftyp' and len(b)>10000, (slot, len(b), b[:12])
+              slots.append({
+                'slot': slot, 'id': f'slop-{slot}-0', 'generation': slot,
+                'handle': handle, 'caption': caption, 'prompt': prompt,
+                'model': 'h3', 'status': 'ready',
+                't2vUrl': f'/api/media/slop-{slot}-0-t2v.mp4',
+                't2vFile': f'slop-{slot}-0-t2v.mp4',
+                'createdAt': now+slot,
+              })
+          man={'version':1,'poolSize':20,'promptSeq':20,'lastRefreshAt':now,'slots':slots}
+          pathlib.Path('data/clips/manifest.json').write_text(json.dumps(man, indent=2)+'\n')
+          print('bytes', sum(pathlib.Path(f'data/clips/slop-{s}-0-t2v.mp4').stat().st_size for s in range(20)))
+          PY
+      - name: Commit pool and remove this one-shot workflow
+        run: |
+          set -euo pipefail
+          git config user.name 'Scott Mansfield'
+          git config user.email 'sgmansf@gmail.com'
+          rm -f .github/workflows/import-starter-pool.yml
+          git add data/clips/*.mp4 data/clips/manifest.json
+          git add -u .github/workflows/import-starter-pool.yml || true
+          git status
+          git commit -m "Commit the starter pool of 20 MiniMax H3 clips."
+          git push origin HEAD:main
