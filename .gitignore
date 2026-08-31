@@ -8,6 +8,9 @@ dist
 data/**
 !data/clips/
 !data/clips/manifest.example.json
+!data/clips/manifest.json
+!data/clips/*.mp4
+!data/clips/*.jpg
 *.log
 .DS_Store
 coverage
