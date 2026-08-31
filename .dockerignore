@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+data/clips/*.mp4
+data/clips/*.jpg
+data/clips/*.jpeg
+data/clips/*.webm
+*.log
+coverage
+print-node.js
+check-tools.sh
+README.md
+test
