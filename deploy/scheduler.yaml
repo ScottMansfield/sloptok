@@ -1,0 +1,14 @@
+# Cloud Scheduler POST /internal/refill every 30 minutes with OIDC.
+# gcloud scheduler jobs create http sloptok-refill --location=REGION --schedule="every 30 minutes" --time-zone="America/Los_Angeles" --uri="${SLOP_PUBLIC_URL}/internal/refill" --http-method=POST --oidc-service-account-email=sloptok-scheduler@PROJECT_ID.iam.gserviceaccount.com --oidc-token-audience="${SLOP_PUBLIC_URL}"
+name: projects/PROJECT_ID/locations/REGION/jobs/sloptok-refill
+schedule: every 30 minutes
+timeZone: America/Los_Angeles
+httpTarget:
+  uri: SLOP_PUBLIC_URL/internal/refill
+  httpMethod: POST
+  oidcToken:
+    serviceAccountEmail: sloptok-scheduler@PROJECT_ID.iam.gserviceaccount.com
+    audience: SLOP_PUBLIC_URL
+attemptDeadline: 30s
+retryConfig:
+  retryCount: 0

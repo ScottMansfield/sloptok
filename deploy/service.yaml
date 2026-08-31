@@ -1,0 +1,53 @@
+# Cloud Run service: HTTP only. Never poll fal. Waiting costs money.
+# Substitute PROJECT_ID, REGION, and IMAGE before deploy.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: sloptok
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "3"
+        run.googleapis.com/cpu-throttling: "true"
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 60
+      serviceAccountName: sloptok-run@PROJECT_ID.iam.gserviceaccount.com
+      containers:
+        - image: IMAGE
+          ports:
+            - name: http1
+              containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "8080"
+            - name: SLOP_BUCKET
+              value: SLOP_BUCKET
+            - name: CDN_BASE_URL
+              value: CDN_BASE_URL
+            - name: SLOP_PUBLIC_URL
+              value: SLOP_PUBLIC_URL
+            - name: FAL_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: FAL_KEY
+                  key: latest
+            - name: WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: WEBHOOK_SECRET
+                  key: latest
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 12
