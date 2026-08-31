@@ -9,7 +9,8 @@
     "start": "next start",
     "test": "node --test test/*.test.js",
     "slop": "node scripts/slop.js",
-    "slop:ltx": "node scripts/slop.js --ltx"
+    "slop:ltx": "node scripts/slop.js --ltx",
+    "refill": "node scripts/refill.js"
   },
   "dependencies": {
     "next": "^15.5.2",
