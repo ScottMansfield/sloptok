@@ -179,18 +179,24 @@ describe("clip pool", () => {
     assert.equal(m.startCounts.t2vTotal, 3);
   });
 
-  it("refresh replaces exactly one slot and bumps t2v count by 1", async () => {
+  it("refresh appends a new slot and leaves original ids unchanged", async () => {
     const { m } = machineWith({ poolSize: 4 });
     await fillPool(m, 4);
     const before = m.startCounts.t2vTotal;
     const idsBefore = [0, 1, 2, 3].map((s) => m.raw(s).id);
     const result = m.refresh();
     assert.equal(result.ok, true);
+    assert.equal(result.slot, 4);
     assert.equal(m.startCounts.t2vTotal, before + 1);
     const idsAfter = [0, 1, 2, 3].map((s) => m.raw(s).id);
-    const changed = idsAfter.filter((id, i) => id !== idsBefore[i]);
-    assert.equal(changed.length, 1);
-    assert.equal(idsAfter.filter((id) => idsBefore.includes(id)).length, 3);
+    assert.deepEqual(idsAfter, idsBefore);
+    assert.equal(m.poolStatus().filled, 5);
+    assert.equal(m.raw(4).slot, 4);
+
+    const feed = await m.getFeed(4);
+    assert.equal(feed.clips[0].slot, 4);
+    assert.equal(feed.clips[0].feedIndex, 4);
+    assert.equal(feed.clips[0].id, m.raw(4).id);
   });
 
   it("does not generate fallback for recycled views of a ready slot", async () => {
@@ -269,5 +275,65 @@ describe("clip pool", () => {
     assert.equal(feed.clips[0].id, m.raw(2).id);
     assert.equal(feed.clips[1].slot, 3);
     assert.equal(feed.clips[2].slot, 0);
+  });
+
+  it("hydrate 4 ready slots, refresh appends 5th without deleting hydrated ids", async () => {
+    const hydrate = {
+      version: 1,
+      poolSize: 4,
+      promptSeq: 4,
+      lastRefreshAt: 1,
+      slots: [0, 1, 2, 3].map((slot) => ({
+        slot,
+        id: `slop-${slot}-ready`,
+        handle: `@h${slot}`,
+        caption: `c${slot}`,
+        prompt: `p${slot}`,
+        model: "h3",
+        t2vUrl: `/api/media/slop-${slot}-t2v.mp4`,
+        t2vFile: `slop-${slot}-t2v.mp4`,
+        createdAt: slot + 1,
+      })),
+    };
+    const { m } = machineWith({ poolSize: 4, hydrate });
+    const idsBefore = [0, 1, 2, 3].map((s) => m.raw(s).id);
+    const result = m.refresh();
+    assert.equal(result.ok, true);
+    assert.equal(result.slot, 4);
+    assert.deepEqual(
+      [0, 1, 2, 3].map((s) => m.raw(s).id),
+      idsBefore,
+    );
+    assert.equal(m.poolStatus().filled, 5);
+    assert.equal(m.raw(4).slot, 4);
+  });
+
+  it("hydrate does not shrink a library larger than targetFill", async () => {
+    const hydrate = {
+      version: 1,
+      poolSize: 4,
+      promptSeq: 5,
+      lastRefreshAt: 1,
+      slots: [0, 1, 2, 3, 4].map((slot) => ({
+        slot,
+        id: `slop-${slot}-ready`,
+        handle: `@h${slot}`,
+        caption: `c${slot}`,
+        prompt: `p${slot}`,
+        model: "h3",
+        t2vUrl: `/api/media/slop-${slot}-t2v.mp4`,
+        t2vFile: `slop-${slot}-t2v.mp4`,
+        createdAt: slot + 1,
+      })),
+    };
+    const { m } = machineWith({ poolSize: 4, hydrate });
+    assert.equal(m.poolStatus().filled, 5);
+    const feed = await m.getFeed(4);
+    assert.equal(feed.clips[0].slot, 4);
+    assert.equal(feed.clips[0].id, "slop-4-ready");
+    assert.equal(m.startCounts.t2vTotal, 0);
+    const wrapped = await m.getFeed(5);
+    assert.equal(wrapped.clips[0].slot, 0);
+    assert.equal(wrapped.clips[0].id, "slop-0-ready");
   });
 });
