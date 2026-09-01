@@ -11,8 +11,10 @@ function feedKey(clip, fallback) {
   return fallback;
 }
 
-async function loadWindow(index, garnish) {
-  const res = await fetch(`/api/feed?index=${index}&garnish=${garnish}`, {
+async function loadWindow(index, garnish, seed) {
+  const q = new URLSearchParams({ index: String(index), garnish: String(garnish || "h3") });
+  if (seed) q.set("seed", String(seed));
+  const res = await fetch(`/api/feed?${q}`, {
     cache: "no-store",
   });
   if (!res.ok) throw new Error("feed failed");
@@ -42,6 +44,7 @@ export default function Feed() {
   const [booted, setBooted] = useState(false);
   const scroller = useRef(null);
   const lock = useRef(false);
+  const seed = useRef(String(Math.floor(Math.random() * 1e9)));
 
   const snapshot = useCallback(() => {
     const max = Math.max(index + 2, ...CACHE.keys(), 2);
@@ -56,7 +59,7 @@ export default function Feed() {
     let cancelled = false;
     (async () => {
       try {
-        await loadWindow(0, garnish);
+        await loadWindow(0, garnish, seed.current);
         if (!cancelled) {
           snapshot();
           setBooted(true);
@@ -71,7 +74,7 @@ export default function Feed() {
   }, [garnish, snapshot]);
 
   useEffect(() => {
-    loadWindow(index, garnish).then(() => snapshot()).catch(() => {});
+    loadWindow(index, garnish, seed.current).then(() => snapshot()).catch(() => {});
   }, [index, garnish, snapshot]);
 
   useEffect(() => {

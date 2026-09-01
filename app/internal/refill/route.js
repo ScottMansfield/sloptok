@@ -28,6 +28,7 @@ export async function POST(req) {
   if (gcs) {
     const pending = {
       ...library,
+      promptSeq: Math.max(library.promptSeq || 0, result.slot + 1),
       pending: {
         ...(library.pending || {}),
         [result.request_id]: {
