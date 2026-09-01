@@ -337,3 +337,40 @@ describe("clip pool", () => {
     assert.equal(wrapped.clips[0].id, "slop-0-ready");
   });
 });
+
+describe("shuffled feed order", () => {
+  it("with a seed, walk 0..n-1 covers every slot once", async () => {
+    const hydrate = {
+      version: 1,
+      poolSize: 8,
+      promptSeq: 8,
+      lastRefreshAt: 1,
+      slots: [0, 1, 2, 3, 4, 5, 6, 7].map((slot) => ({
+        slot,
+        id: `slop-${slot}-ready`,
+        handle: `@h${slot}`,
+        caption: `c${slot}`,
+        prompt: `p${slot}`,
+        model: "h3",
+        t2vUrl: `/api/media/slop-${slot}-t2v.mp4`,
+        t2vFile: `slop-${slot}-t2v.mp4`,
+        createdAt: slot + 1,
+      })),
+    };
+    const { m } = machineWith({ poolSize: 8, hydrate, startT2V: undefined, startFallback: undefined });
+    const seen = [];
+    for (let i = 0; i < 8; i++) {
+      const feed = await m.getFeed(i, { seed: "session-7" });
+      seen.push(feed.clips[0].slot);
+    }
+    assert.equal(new Set(seen).size, 8);
+    assert.deepEqual([...seen].sort((a, b) => a - b), [0, 1, 2, 3, 4, 5, 6, 7]);
+    assert.notDeepEqual(seen, [0, 1, 2, 3, 4, 5, 6, 7]);
+    const again = [];
+    for (let i = 0; i < 8; i++) {
+      const feed = await m.getFeed(i, { seed: "session-7" });
+      again.push(feed.clips[0].slot);
+    }
+    assert.deepEqual(again, seen);
+  });
+});
