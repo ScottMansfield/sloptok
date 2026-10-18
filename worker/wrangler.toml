@@ -25,7 +25,7 @@ crons = ["*/30 * * * *"]
 
 [vars]
 # Kill switch: cron refill does nothing unless this is exactly "true".
-REFILL_ENABLED = "false"
+REFILL_ENABLED = "true"
 DAILY_GEN_CAP = "4"
 MONTHLY_GEN_CAP = "60"
 MAX_PENDING = "1"
