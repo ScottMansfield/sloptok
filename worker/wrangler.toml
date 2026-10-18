@@ -26,8 +26,8 @@ crons = ["*/30 * * * *"]
 [vars]
 # Kill switch: cron refill does nothing unless this is exactly "true".
 REFILL_ENABLED = "true"
-DAILY_GEN_CAP = "4"
-MONTHLY_GEN_CAP = "60"
+DAILY_GEN_CAP = "24"
+MONTHLY_GEN_CAP = "720"
 MAX_PENDING = "1"
 FAL_MODEL = "minimax/h3/text-to-video"
 PUBLIC_URL = "https://sloptok.dev"

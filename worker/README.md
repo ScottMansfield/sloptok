@@ -11,7 +11,7 @@ Serves sloptok.dev as of 2026-10-11 ~11:36 PM PT. Replaces Next.js on Cloud Run 
 
 ## Spend guards (all in the DO)
 - `REFILL_ENABLED` (kill switch, default `"false"`): the cron does nothing unless it is `"true"`.
-- `DAILY_GEN_CAP=4`, `MONTHLY_GEN_CAP=60` (rolling 24 h / 30 d), and `MAX_PENDING=1` in flight.
+- `DAILY_GEN_CAP=24`, `MONTHLY_GEN_CAP=720` (rolling 24 h / 30 d), and `MAX_PENDING=1` in flight.
 - Webhooks never submit new generations.
 - Also set a spend limit in the fal.ai dashboard.
 
